@@ -1,17 +1,14 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { ChromaClient, Collection, IncludeEnum, IEmbeddingFunction } from 'chromadb';
-import { generateEmbedding, VECTOR_SIZE } from './embedding-utils';
-import { FormattedResult } from '../types/qdrant-types';
+import { generateEmbedding } from '../utils/embedding';
+import { VECTOR_SIZE, QDRANT_URL, QDRANT_API_KEY } from '../configs/qdrant';
+import { CHROMA_URL } from '../configs/chroma';
+import { COLLECTION_NAME, DatabaseType, DATABASE_TYPE } from '../configs/common';
+import { FormattedResult } from '../types/qdrant';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
-
-// Database type
-export enum DatabaseType {
-  QDRANT = 'qdrant',
-  CHROMA = 'chroma'
-}
 
 // Simple embedding function implementation for Chroma
 class CustomEmbeddingFunction implements IEmbeddingFunction {
@@ -35,12 +32,9 @@ export class DatabaseService {
   private embeddingFunction: IEmbeddingFunction;
 
   constructor() {
-    // Determine which database to use from environment
-    this.dbType = (process.env.DATABASE_TYPE?.toLowerCase() === 'chroma')
-      ? DatabaseType.CHROMA
-      : DatabaseType.QDRANT;
-    
-    this.collectionName = process.env.COLLECTION_NAME || 'vito';
+    // Use the database type from common config
+    this.dbType = DATABASE_TYPE;
+    this.collectionName = COLLECTION_NAME;
     this.embeddingFunction = new CustomEmbeddingFunction();
     
     console.log(`Using database type: ${this.dbType}`);
@@ -60,8 +54,8 @@ export class DatabaseService {
 
   private async initializeQdrant(): Promise<void> {
     this.qdrantClient = new QdrantClient({
-      url: process.env.QDRANT_URL || 'http://localhost:6333',
-      apiKey: process.env.QDRANT_API_KEY,
+      url: QDRANT_URL,
+      apiKey: QDRANT_API_KEY,
     });
 
     try {
@@ -88,7 +82,7 @@ export class DatabaseService {
 
   private async initializeChroma(): Promise<void> {
     this.chromaClient = new ChromaClient({
-      path: process.env.CHROMA_URL || 'http://localhost:8000'
+      path: CHROMA_URL
     });
 
     try {
@@ -131,21 +125,26 @@ export class DatabaseService {
       throw new Error('Qdrant client not initialized');
     }
 
-    const searchResults = await this.qdrantClient.search(this.collectionName, {
-      vector: queryEmbedding,
-      limit: limit,
-      score_threshold: scoreThreshold,
-      with_payload: true,
-    });
-    
-    return searchResults.map(result => ({
-      text: String(result.payload?.text || ''),
-      metadata: {
-        source: String(result.payload?.source || ''),
-        score: result.score,
-        ...result.payload
-      },
-    }));
+    try {
+      const searchResults = await this.qdrantClient.search(this.collectionName, {
+        vector: queryEmbedding,
+        limit: limit,
+        score_threshold: scoreThreshold,
+        with_payload: true,
+      });
+      
+      return searchResults.map(result => ({
+        text: String(result.payload?.text || ''),
+        metadata: {
+          source: String(result.payload?.source || ''),
+          score: result.score,
+          ...result.payload
+        },
+      }));
+    } catch (error) {
+      console.error(`Error searching Qdrant collection ${this.collectionName}:`, error);
+      return [];
+    }
   }
 
   private async searchChroma(queryEmbedding: number[], limit: number): Promise<FormattedResult[]> {
@@ -225,6 +224,7 @@ export class DatabaseService {
         vector: embedding,
         payload: {
           text,
+          embedding_type: 'fastembed',
           ...metadata
         }
       }]

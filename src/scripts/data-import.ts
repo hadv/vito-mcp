@@ -5,8 +5,10 @@
  * Usage: ts-node data-import.ts --file=your-data.json
  */
 
-import { generateEmbedding } from '../core/embedding-utils';
-import { DatabaseType } from '../core/db-service';
+import { generateEmbedding } from '../utils/embedding';
+import { VECTOR_SIZE, QDRANT_URL, QDRANT_API_KEY } from '../configs/qdrant';
+import { CHROMA_URL } from '../configs/chroma';
+import { COLLECTION_NAME, DatabaseType, DATABASE_TYPE } from '../configs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import dotenv from 'dotenv';
@@ -28,22 +30,17 @@ class CustomEmbeddingFunction implements IEmbeddingFunction {
   }
 }
 
-// Determine which database to use
-const dbType = (process.env.DATABASE_TYPE?.toLowerCase() === 'chroma')
-  ? DatabaseType.CHROMA
-  : DatabaseType.QDRANT;
-
-// Collection name
-const collectionName = process.env.COLLECTION_NAME || 'documents';
+// Use the database type from common config
+const dbType = DATABASE_TYPE;
 
 // Database clients
 const qdrantClient = new QdrantClient({
-  url: process.env.QDRANT_URL || 'http://localhost:6333',
-  apiKey: process.env.QDRANT_API_KEY,
+  url: QDRANT_URL,
+  apiKey: QDRANT_API_KEY,
 });
 
 const chromaClient = new ChromaClient({
-  path: process.env.CHROMA_URL || 'http://localhost:8000'
+  path: CHROMA_URL
 });
 
 // Create embedding function instance
@@ -108,6 +105,7 @@ async function importToQdrant(documents: any[]) {
           payload: {
             text: doc.text,
             source: doc.source,
+            embedding_type: 'fastembed',
             ...(doc.metadata || {}),
           },
         };
@@ -116,7 +114,7 @@ async function importToQdrant(documents: any[]) {
       const points = await Promise.all(promises);
       
       // Insert batch into Qdrant
-      await qdrantClient.upsert(collectionName, {
+      await qdrantClient.upsert(COLLECTION_NAME, {
         points,
       });
       
@@ -187,19 +185,19 @@ async function importToChroma(documents: any[]) {
 async function ensureQdrantCollection() {
   try {
     const collections = await qdrantClient.getCollections();
-    const collectionExists = collections.collections.some(c => c.name === collectionName);
+    const collectionExists = collections.collections.some(c => c.name === COLLECTION_NAME);
     
     if (!collectionExists) {
-      console.log(`Creating Qdrant collection ${collectionName}...`);
-      await qdrantClient.createCollection(collectionName, {
+      console.log(`Creating Qdrant collection ${COLLECTION_NAME}...`);
+      await qdrantClient.createCollection(COLLECTION_NAME, {
         vectors: {
-          size: 1536, // OpenAI embedding size
+          size: VECTOR_SIZE,
           distance: 'Cosine',
         }
       });
-      console.log(`Qdrant collection ${collectionName} created.`);
+      console.log(`Qdrant collection ${COLLECTION_NAME} created.`);
     } else {
-      console.log(`Qdrant collection ${collectionName} already exists.`);
+      console.log(`Qdrant collection ${COLLECTION_NAME} already exists.`);
     }
     
     return qdrantClient;
@@ -215,21 +213,21 @@ async function ensureQdrantCollection() {
 async function ensureChromaCollection() {
   try {
     const collections = await chromaClient.listCollections();
-    const collectionExists = collections.some((collection: any) => collection.name === collectionName);
+    const collectionExists = collections.some((collection: any) => collection.name === COLLECTION_NAME);
     
     if (!collectionExists) {
-      console.log(`Creating Chroma collection ${collectionName}...`);
+      console.log(`Creating Chroma collection ${COLLECTION_NAME}...`);
       const collection = await chromaClient.createCollection({
-        name: collectionName,
+        name: COLLECTION_NAME,
         metadata: { 'description': 'MCP Server collection' },
         embeddingFunction: embeddingFunction
       });
-      console.log(`Chroma collection ${collectionName} created.`);
+      console.log(`Chroma collection ${COLLECTION_NAME} created.`);
       return collection;
     } else {
-      console.log(`Chroma collection ${collectionName} already exists.`);
+      console.log(`Chroma collection ${COLLECTION_NAME} already exists.`);
       const collection = await chromaClient.getCollection({
-        name: collectionName,
+        name: COLLECTION_NAME,
         embeddingFunction: embeddingFunction
       });
       return collection;

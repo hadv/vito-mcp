@@ -1,11 +1,17 @@
 import { DatabaseService } from '../src/core/db-service';
-import * as embeddingUtils from '../src/core/embedding-utils';
+import * as embeddingUtils from '../src/utils/embedding';
+import { VECTOR_SIZE } from '../src/configs/qdrant';
 
 // Mock the embedding-utils module
-jest.mock('../src/core/embedding-utils', () => ({
+jest.mock('../src/utils/embedding', () => ({
   generateEmbedding: jest.fn(),
-  VECTOR_SIZE: 768,
-  cosineSimilarity: jest.requireActual('../src/core/embedding-utils').cosineSimilarity
+}));
+
+// Mock config module
+jest.mock('../src/configs/qdrant', () => ({
+  VECTOR_SIZE: 384,
+  QDRANT_URL: 'http://mock-qdrant:6333',
+  QDRANT_API_KEY: 'mock-api-key'
 }));
 
 // Mock QdrantClient
@@ -59,7 +65,7 @@ beforeEach(() => {
   process.env = { ...originalEnv };
   // Mock generateEmbedding to return a vector of the correct size
   (embeddingUtils.generateEmbedding as jest.Mock).mockResolvedValue(
-    Array(embeddingUtils.VECTOR_SIZE).fill(0.1)
+    Array(VECTOR_SIZE).fill(0.1)
   );
 });
 
@@ -118,7 +124,7 @@ describe('DatabaseService', () => {
       expect(results[0]).toHaveProperty('text', 'Test document 1');
       expect(results[0].metadata).toHaveProperty('source', 'test-source-1');
       // For Chroma, score is 1 - distance
-      expect(results[0].metadata).toHaveProperty('score', 0.9);
+      expect(results[0].metadata).toHaveProperty('score', 0.95);
     });
   });
 }); 

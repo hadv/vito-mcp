@@ -32,7 +32,7 @@ export interface ChromaCollectionsResponse {
   collections: ChromaCollection[];
 }
 
-// Formatted result returned by the MCP server (same as in qdrant-types)
+// Formatted result returned by the MCP server (same as in qdrant)
 export interface FormattedResult {
   text: string;
   metadata: {

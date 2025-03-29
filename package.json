@@ -17,9 +17,9 @@
     "store-doc": "ts-node src/scripts/store-documentation.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.0",
     "@modelcontextprotocol/sdk": "^1.8.0",
     "@qdrant/js-client-rest": "^1.13.0",
+    "axios": "^1.8.4",
     "chromadb": "^2.1.0",
     "dotenv": "^16.4.7",
     "pdf-parse": "^1.1.1",

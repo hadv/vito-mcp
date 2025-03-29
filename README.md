@@ -6,6 +6,7 @@ A server implementation that supports both Qdrant and Chroma vector databases fo
 
 - Support for both Qdrant and Chroma vector databases
 - Configurable database selection via environment variables
+- Uses Qdrant's built-in FastEmbed for efficient embedding generation
 - Domain knowledge storage and retrieval
 - Documentation file storage with metadata
 - Support for PDF and TXT file formats
@@ -40,7 +41,6 @@ DATABASE_TYPE=qdrant
 QDRANT_URL=https://your-qdrant-instance.example.com:6333
 QDRANT_API_KEY=your_api_key
 COLLECTION_NAME=your_collection_name
-GEMINI_API_KEY=your_gemini_api_key
 ```
 
 5. Build the project:
@@ -222,6 +222,24 @@ QDRANT_URL=https://your-instance-id.region.gcp.cloud.qdrant.io:6333
 QDRANT_API_KEY=your_qdrant_api_key
 ```
 
+## FastEmbed Integration
+
+This project uses Qdrant's built-in FastEmbed for efficient embedding generation:
+
+### Benefits
+- Lightweight and fast embedding generation
+- Uses quantized model weights and ONNX Runtime for inference
+- Better accuracy than OpenAI Ada-002 according to Qdrant
+- No need for external embedding API keys
+
+### How It Works
+1. The system connects to your Qdrant instance
+2. When generating embeddings, it uses Qdrant's server-side embedding endpoint
+3. This eliminates the need for external embedding APIs and simplifies the architecture
+
+### Configuration
+No additional configuration is needed as FastEmbed is built into Qdrant. Just ensure your Qdrant URL and API key are correctly set in your `.env` file.
+
 ## Troubleshooting
 
 If you encounter issues:
@@ -229,7 +247,7 @@ If you encounter issues:
 1. Make sure you're using Node.js LTS version (`nvm use --lts`)
 2. Verify your environment variables are correct
 3. Check Qdrant/Chroma connectivity
-4. Ensure the GEMINI_API_KEY is valid if using Gemini for embeddings
+4. Ensure your Qdrant instance is properly configured
 
 ## License
 

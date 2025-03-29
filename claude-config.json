@@ -1,0 +1,22 @@
+{
+  "processes": {
+    "knowledge_server": {
+      "command": "powershell.exe",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\ASUS\\vito-mcp\\run-cursor-mcp.ps1"]
+    }
+  },
+  "tools": [
+    {
+      "name": "store_knowledge",
+      "description": "Store domain-specific knowledge in a vector database",
+      "provider": "process",
+      "process": "knowledge_server"
+    },
+    {
+      "name": "retrieve_knowledge_context",
+      "description": "Retrieve relevant domain knowledge from a vector database",
+      "provider": "process",
+      "process": "knowledge_server"
+    }
+  ]
+} 
